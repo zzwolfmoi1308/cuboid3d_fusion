@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CVAT 3D Fusion Suite</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Header & Connection Bar -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand">
+        <span class="brand-dot" id="statusDot"></span>
+        <div>
+          <h1>CVAT 3D Fusion Suite</h1>
+          <div class="sub" id="connectionSubtitle">Đang kiểm tra tab CVAT...</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btnAgent" class="pill" title="Bấm để kiểm tra lại Fusion Agent (127.0.0.1:8766)">agent ?</button>
+        <button id="btnDomain" class="btn btn-xs btn-primary hidden" title="Cấp quyền cho domain CVAT đang mở">Cấp quyền</button>
+        <button id="btnConnect" class="btn btn-xs btn-ghost" title="Làm mới kết nối job CVAT">↻</button>
+      </div>
+    </div>
+    <div class="job-meta-bar">
+      <span class="pill" id="metaJobId">Job: —</span>
+      <span class="pill" id="metaFrameRange">Frames: —</span>
+      <span class="pill" id="metaProfileBadge">Profile: —</span>
+      <span class="pill" id="metaModeBadge">Read-only (V1)</span>
+    </div>
+  </header>
+
+  <!-- 5 Navigation Tabs -->
+  <nav class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="prelabel">Pre-label</button>
+    <button class="tab-btn" data-tab="qa">QA Audit</button>
+    <button class="tab-btn" data-tab="ref">Size &amp; Check</button>
+    <button class="tab-btn" data-tab="issue">Issue</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </nav>
+
+  <!-- Toast Banner -->
+  <div id="toastBanner" class="toast hidden"></div>
+
+  <!-- Main Content -->
+  <main class="tab-container">
+    <!-- TAB 1: FUSION PRE-LABEL -->
+    <section id="tab-prelabel" class="tab-pane active">
+      <!-- Point Cloud Size & Brightness Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Hiển thị Point Cloud 3D</h2>
+          <span class="badge" id="viewBoostBadge">1.0x · 100%</span>
+        </div>
+        <div class="boost-row">
+          <label for="optPointSize" class="boost-label">Size điểm</label>
+          <input id="optPointSize" type="range" min="0.5" max="10" step="0.5" value="1" class="boost-slider" />
+          <span id="valPointSize" class="boost-value">1.0x</span>
+        </div>
+        <div class="boost-row mt-6">
+          <label for="optViewBrightness" class="boost-label">Độ sáng</label>
+          <input id="optViewBrightness" type="range" min="30" max="300" step="5" value="100" class="boost-slider" />
+          <span id="valViewBrightness" class="boost-value">100%</span>
+        </div>
+        <div class="action-row mt-6 space-between">
+          <label class="checkbox-row">
+            <input type="checkbox" id="optBrightenCam2d" />
+            <span>Sáng cả Camera 2D</span>
+          </label>
+          <button id="btnResetViewBoost" class="btn btn-xs btn-ghost" title="Đưa Size về 1.0x và Độ sáng về 100%">Mặc định</button>
+        </div>
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="optCamArrowShortcut" checked />
+          <span>Phím <b>[ / ]</b> chuyển Camera 2D trong frame</span>
+        </label>
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="optColorPointsByCuboid" />
+          <span><b>Tô màu điểm trong Cuboid theo màu Label</b></span>
+        </label>
+        <div id="pointColorSubOptions" class="action-row mt-6 hidden">
+          <label class="checkbox-row small"><input type="checkbox" id="optDimOutsidePoints" /><span>Làm mờ điểm ngoài box</span></label>
+          <label class="checkbox-row small"><input type="checkbox" id="optColorSelectedOnly" /><span>Chỉ box đang chọn</span></label>
+        </div>
+        <div id="pointColorStatus" class="field-hint hidden"></div>
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="optShowEgoDistance" />
+          <span><b>Hiện khoảng cách tới xe Ego (m)</b> trên 3D &amp; Camera</span>
+        </label>
+      </div>
+
+      <!-- Realtime Camera 2D Projection Overlay Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Chiếu Cuboid lên Camera 2D (Realtime)</h2>
+          <span class="badge" id="overlayBadge">Tắt</span>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" id="optCamOverlay" />
+          <span><b>Bật vẽ khung 3D đè trực tiếp lên các ô cam 2D trên CVAT</b></span>
+        </label>
+        <div class="action-row mt-6">
+          <label class="checkbox-row"><input type="checkbox" id="optOverlayLabels" checked /><span>Hiện #ID/Class</span></label>
+          <label class="checkbox-row"><input type="checkbox" id="optOverlaySelectedOnly" /><span>Chỉ box đang chọn</span></label>
+        </div>
+        <div class="action-row mt-6">
+          <button id="btnPickCalibDir" class="btn btn-xs btn-secondary">Chọn thư mục Calib</button>
+          <button id="btnPickCalibFiles" class="btn btn-xs btn-secondary">Chọn file calib.json</button>
+          <input id="inputCalibDir" type="file" webkitdirectory multiple class="hidden" />
+          <input id="inputCalibFiles" type="file" multiple accept=".json,application/json" class="hidden" />
+        </div>
+        <div class="action-row mt-6">
+          <input id="inputLocalCalibPath" type="text" class="input-sm flex-1" placeholder="Hoặc dán đường dẫn thư mục chứa calib.json..." />
+          <button id="btnLoadCalibAgent" class="btn btn-xs btn-primary">Nạp</button>
+        </div>
+        <div id="overlayStatus" class="field-hint">Chưa nạp calib.json (chỉ cần nạp 1 lần, tự lưu).</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Phối hợp đa Model (127.0.0.1:8766)</h2>
+          <span class="badge">Đa Guideline</span>
+        </div>
+        <div id="jobInfo" class="hint preline">Chưa kết nối job CVAT 3D.</div>
+        <div id="profileMismatchBanner" class="warn-banner hidden"></div>
+
+        <div class="action-row mt-6">
+          <select id="quickProfileSelect" class="input-sm flex-1" title="Chọn Profile Guideline / Task"></select>
+          <button id="btnQuickAutoMap" class="btn btn-xs btn-secondary" title="Tự khớp nhãn AI sang nhãn của Job CVAT hiện tại">Tự khớp nhãn</button>
+          <button id="btnQuickUploadGuideline" class="btn btn-xs btn-secondary" title="Upload hoặc dán Guideline mới cho Task này">Upload Guideline</button>
+        </div>
+
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="optSecondDet" checked />
+          <span>Detector phụ PointPillars-FPN (đồng thuận 2 kiến trúc)</span>
+        </label>
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="optCamera" checked />
+          <span>Kiểm class bằng Camera 2D (YOLO11s + High-res Crop)</span>
+        </label>
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="optOdom" checked />
+          <span>Ước lượng chuyển động Ego (LiDAR ICP Odometry)</span>
+        </label>
+
+        <div class="form-group mt-10" id="barrierPrelabelGroup">
+          <label for="optBarrier">Quy ước trục Barrier</label>
+          <select id="optBarrier" class="input-full">
+            <option value="length_is_x">dx = Dài (1.0–3.0m), dy = Rộng (0.4–0.7m)</option>
+            <option value="width_is_x">dx = Rộng (0.4–0.7m), dy = Dài (1.0–3.0m)</option>
+          </select>
+        </div>
+
+        <div class="form-group mt-10">
+          <label for="optCalib">Mẫu URL Calib JSON</label>
+          <input id="optCalib" class="input-full" value="/cuboid-calib/{path_noext}.json" />
+        </div>
+
+        <div class="form-group">
+          <label for="optObjectType">Kiểu đối tượng khi chèn vào CVAT</label>
+          <select id="optObjectType" class="input-full">
+            <option value="track">Track (theo dõi xuyên chuỗi, tự gắn outside)</option>
+            <option value="shape">Shape (cuboid độc lập từng frame, không tạo track)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Phạm vi frame</label>
+          <div class="action-row">
+            <input id="optFrom" type="number" class="input-sm" style="width:76px" />
+            <span class="muted">→</span>
+            <input id="optTo" type="number" class="input-sm" style="width:76px" />
+          </div>
+        </div>
+
+        <div class="action-row mt-10">
+          <button id="btnRunCur" class="btn btn-sm btn-secondary">Thử 1 frame</button>
+          <button id="btnRun" class="btn btn-sm btn-primary flex-1">Chạy toàn phạm vi</button>
+          <button id="btnStop" class="btn btn-sm btn-ghost" disabled>Dừng</button>
+        </div>
+        <progress id="prog" value="0" max="1"></progress>
+        <div id="runLog" class="log mt-6"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Danh sách Track đề xuất</h2>
+          <span id="trackCount" class="muted small">0/0 được chọn</span>
+        </div>
+        <div id="qaSummary" class="qa-banner hidden"></div>
+        <div class="filters">
+          <label><input type="checkbox" class="flt" value="HIGH" checked /> HIGH</label>
+          <label><input type="checkbox" class="flt" value="REVIEW" checked /> REVIEW</label>
+          <label><input type="checkbox" class="flt" value="UNCERTAIN" checked /> UNCERTAIN_CLASS</label>
+          <label><input type="checkbox" class="flt" value="MISSED" checked /> MISSED?</label>
+        </div>
+        <div class="action-row mt-6">
+          <button id="btnSelAll" class="btn btn-xs btn-secondary">Tất cả</button>
+          <button id="btnSelHigh" class="btn btn-xs btn-secondary">Chỉ HIGH</button>
+          <button id="btnSelNone" class="btn btn-xs btn-ghost">Bỏ chọn</button>
+          <button id="btnInject" class="btn btn-xs btn-primary flex-1">Chèn vào CVAT</button>
+        </div>
+        <div id="tracks"></div>
+        <div class="action-row space-between mt-10">
+          <span id="snapInfo" class="muted small">Snapshot backup: chưa có</span>
+          <button id="btnDownloadSnap" class="btn btn-xs btn-secondary" disabled>Tải Snapshot JSON</button>
+        </div>
+        <p class="hint mt-6" style="margin-bottom:0">
+          Tự động lưu Snapshot JSON trước khi chèn. Ghi qua <code>ObjectState</code> (hỗ trợ <code>Ctrl+Z</code>, không tự Save).
+        </p>
+      </div>
+    </section>
+
+    <!-- TAB 2: QA AUDIT (METADATA + PCD + V2 ASSIST) -->
+    <section id="tab-qa" class="tab-pane">
+      <div class="action-row">
+        <button id="btnRunV1" class="btn btn-primary flex-1">Quét QA Metadata</button>
+        <button id="btnRunPcd" class="btn btn-secondary" title="Tải PCD frame hiện tại và kiểm tra mặt đất/điểm">
+          Quét PCD
+        </button>
+      </div>
+
+      <!-- KPI Summary -->
+      <div class="kpi-grid">
+        <button class="kpi-card active-filter" data-sev="ALL" id="kpiAll">
+          <div class="kpi-num" id="cntTotal">0</div>
+          <div class="kpi-label">Tất cả</div>
+        </button>
+        <button class="kpi-card" data-sev="Error">
+          <div class="kpi-num text-red" id="cntError">0</div>
+          <div class="kpi-label">Error</div>
+        </button>
+        <button class="kpi-card" data-sev="Warning">
+          <div class="kpi-num text-amber" id="cntWarning">0</div>
+          <div class="kpi-label">Warning</div>
+        </button>
+        <button class="kpi-card" data-sev="Info">
+          <div class="kpi-num text-sky" id="cntInfo">0</div>
+          <div class="kpi-label">Info</div>
+        </button>
+      </div>
+
+      <!-- Filter & Sort Rows -->
+      <div class="filter-row">
+        <select id="filterFrameScope" class="input-sm flex-1" title="Lọc phạm vi Frame hiển thị">
+          <option value="ALL">Tất cả Job</option>
+          <option value="CURRENT" id="optFilterCurFrame">Frame hiện tại (#—)</option>
+        </select>
+        <select id="sortFindings" class="input-sm flex-1" title="Thứ tự sắp xếp danh sách lỗi">
+          <option value="frame_asc">Frame: 0 → N (Mức độ)</option>
+          <option value="frame_desc">Frame: N → 0 (Mức độ)</option>
+          <option value="sev_frame">Mức độ (Err → Frame)</option>
+          <option value="track_asc">Theo Track ID</option>
+        </select>
+      </div>
+      <div class="filter-row">
+        <select id="filterClass" class="input-sm flex-1">
+          <option value="ALL">Mọi Class</option>
+        </select>
+        <select id="filterRule" class="input-sm flex-1">
+          <option value="ALL">Mọi Luật QA</option>
+        </select>
+        <span class="scan-timing" id="scanTiming"></span>
+      </div>
+
+      <!-- V2 Quick Selected Box Toolbar -->
+      <div id="v2QuickBar" class="card v2-bar hidden">
+        <div class="v2-bar-title">V2 Controlled Assist (Box đang chọn trên CVAT · Hỗ trợ Ctrl+Z)</div>
+        <div class="action-row">
+          <button id="btnV2FlipYaw" class="btn btn-sm btn-warn flex-1">Flip Yaw 180°</button>
+          <button id="btnV2RotateBarrier" class="btn btn-sm btn-secondary flex-1">Xoay 90° + Hoán L/W</button>
+        </div>
+      </div>
+
+      <!-- Findings List -->
+      <div id="findingsList" class="findings-list">
+        <div class="empty-state">
+          Mở 1 job CVAT 3D rồi bấm <b>Quét QA</b> để kiểm tra theo các luật đang bật của Profile hiện tại.
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: SIZE & CHECKLIST -->
+    <section id="tab-ref" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 id="checklistCardTitle">Checklist Trước Khi Submit</h2>
+          <button id="btnResetChecklist" class="btn btn-xs btn-ghost">Đặt lại</button>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="checklistProgressFill"></div></div>
+          <span class="progress-text" id="checklistProgressText">0 / 0</span>
+        </div>
+        <div id="checklistContainer" class="checklist-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 id="sizeCardTitle">Bảng Tham Chiếu Kích Thước</h2>
+          <span class="badge" id="barrierAxisBadge">Barrier: dx=L, dy=W</span>
+        </div>
+        <div class="action-row mb-6">
+          <input id="sizeSearchInput" type="text" class="input-sm flex-1" placeholder="Lọc theo class hoặc loại xe..." />
+          <label class="checkbox-row small"><input type="checkbox" id="optShowAllSizeRef" /><span>Hiện mọi mẫu</span></label>
+        </div>
+        <div class="table-wrap">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Loại / Class</th>
+                <th>L (m)</th>
+                <th>W (m)</th>
+                <th>H (m)</th>
+              </tr>
+            </thead>
+            <tbody id="sizeTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: MENTOR ISSUE DRAFT -->
+    <section id="tab-issue" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2>Tạo Mẫu Báo Cáo / Mentor Issue</h2>
+          <button id="btnPrefillSelected" class="btn btn-xs btn-secondary">Lấy từ box đang chọn</button>
+        </div>
+        <p class="hint">
+          Tự động điền tọa độ &amp; thông tin từ box đang chọn hoặc từ cảnh báo QA để thảo luận nhóm / gửi mentor.
+        </p>
+
+        <div class="form-group">
+          <label for="issueTypeSelect">Loại Issue</label>
+          <select id="issueTypeSelect" class="input-full"></select>
+          <div class="field-hint" id="issueTypeExample"></div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="issueFrame">Frame</label>
+            <input id="issueFrame" type="number" class="input-full" value="0" />
+          </div>
+          <div class="form-group">
+            <label for="issueTrackId">Track ID</label>
+            <input id="issueTrackId" type="text" class="input-full" placeholder="vd: 12" />
+          </div>
+          <div class="form-group">
+            <label for="issueClass">Class</label>
+            <input id="issueClass" type="text" class="input-full" placeholder="vd: Car" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="issueXyz">Tâm (x, y, z)</label>
+          <input id="issueXyz" type="text" class="input-full" placeholder="vd: 14.20, -3.50, -0.85" />
+        </div>
+
+        <div class="form-group">
+          <label for="issueDesc">Mô tả ngắn</label>
+          <textarea id="issueDesc" rows="3" class="input-full" placeholder="Mô tả điểm chưa rõ trên LiDAR/Camera..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="issueTeamVote">Kết quả thảo luận / Vote (tùy chọn)</label>
+          <input id="issueTeamVote" type="text" class="input-full" placeholder="vd: 3/4 chọn Truck, 1 chọn Car" />
+        </div>
+
+        <div class="form-group">
+          <label>Bản nháp chuẩn (Preview)</label>
+          <pre id="issueDraftPreview" class="code-preview"></pre>
+        </div>
+
+        <div class="action-row">
+          <button id="btnCopyIssueDraft" class="btn btn-primary flex-1">Copy Mẫu Issue</button>
+          <button id="btnPostCvatIssue" class="btn btn-secondary hidden">Gửi lên CVAT</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: SETTINGS, DYNAMIC GUIDELINE & DAY 0 -->
+    <section id="tab-settings" class="tab-pane">
+      <!-- 1. Profile & Guideline Upload Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Profile &amp; Upload Guideline Động</h2>
+          <span class="badge">Đa Task</span>
+        </div>
+        <p class="hint">
+          Mỗi Task / Bài Lab có thể tạo Profile riêng từ nhãn Job đang mở hoặc <b>Upload / Dán Guideline</b> (.json, .csv, .md, .txt, .docx, .pdf) bất kỳ lúc nào mà không cần sửa code.
+        </p>
+
+        <div class="action-row">
+          <select id="cfgProfileSelect" class="input-sm flex-1"></select>
+          <button id="btnNewFromJob" class="btn btn-xs btn-primary" title="Tạo Profile mới bám sát danh sách nhãn của Job đang mở">+ Từ Job</button>
+          <button id="btnNewProfile" class="btn btn-xs btn-secondary" title="Nhân bản Profile hiện tại">+ Bản sao</button>
+          <button id="btnDeleteProfile" class="btn btn-xs btn-ghost" disabled>Xóa</button>
+        </div>
+
+        <div class="action-row mt-6">
+          <button id="btnOpenUploadGuideline" class="btn btn-xs btn-warn flex-1">📄 Upload / Dán Guideline...</button>
+          <button id="btnDownloadGuidelineTpl" class="btn btn-xs btn-secondary" title="Tải file JSON mẫu tạo sẵn theo nhãn Job hiện tại">⬇ Mẫu JSON</button>
+        </div>
+
+        <div class="action-row mt-6">
+          <button id="btnExportProfile" class="btn btn-xs btn-secondary">Export Profile</button>
+          <button id="btnImportProfile" class="btn btn-xs btn-secondary">Import JSON</button>
+          <input id="fileImportProfile" type="file" accept=".json,application/json" class="hidden" />
+          <button id="btnAutoMapLabels" class="btn btn-xs btn-secondary flex-1">Tự khớp Label Job</button>
+        </div>
+
+        <div class="form-group mt-10">
+          <label for="cfgTaxonomyMode">Kiểm tra Taxonomy (Luật R1)</label>
+          <select id="cfgTaxonomyMode" class="input-full">
+            <option value="job_labels">Tự động chấp nhận mọi nhãn của Job CVAT hiện tại</option>
+            <option value="strict_profile">Cố định theo danh sách nhãn của Profile</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Ánh xạ 10 class AI gốc → Tên nhãn trong Job CVAT (để trống = Bỏ qua không detect)</label>
+          <datalist id="jobLabelsDatalist"></datalist>
+          <div id="labelMappingList" class="mapping-grid"></div>
+        </div>
+      </div>
+
+      <!-- 2. Rule Toggles Card (15 independent toggles) -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Bật / Tắt Từng Luật QA Theo Profile</h2>
+          <div class="action-row">
+            <button id="btnEnableAllRules" class="btn btn-xs btn-ghost">Bật hết</button>
+            <button id="btnDisableAllRules" class="btn btn-xs btn-ghost">Tắt hết</button>
+          </div>
+        </div>
+        <div class="sub-heading">Luật Metadata &amp; Quỹ đạo Track (V1)</div>
+        <div id="ruleTogglesV1" class="rules-toggle-list"></div>
+        <div class="sub-heading mt-10">Luật Point Cloud 3D (V1.5)</div>
+        <div id="ruleTogglesPcd" class="rules-toggle-list"></div>
+      </div>
+
+      <!-- 3. Distance & Per-Class Reference Size Editor -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Khoảng Cách &amp; Kích Thước Từng Class</h2>
+          <button id="btnSyncSpecsFromJob" class="btn btn-xs btn-secondary" title="Đồng bộ danh sách class từ nhãn của Job hiện tại">Lấy nhãn từ Job</button>
+        </div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="cfgDistVehicle">Vehicle (m)</label>
+            <input id="cfgDistVehicle" type="number" min="5" max="250" class="input-full" />
+          </div>
+          <div class="form-group">
+            <label for="cfgDistVru">VRU (m)</label>
+            <input id="cfgDistVru" type="number" min="5" max="250" class="input-full" />
+          </div>
+          <div class="form-group">
+            <label for="cfgDistStatic">Static (m)</label>
+            <input id="cfgDistStatic" type="number" min="5" max="250" class="input-full" />
+          </div>
+        </div>
+
+        <details class="editor-details mt-6">
+          <summary>Chỉnh chi tiết từng Class (Khoảng cách riêng, L/W/H, ±Tol%, Yaw)</summary>
+          <div id="classSpecsContainer" class="class-specs-list mt-6"></div>
+          <div class="action-row mt-6">
+            <button id="btnAddClassSpec" class="btn btn-xs btn-secondary">+ Thêm Class</button>
+          </div>
+        </details>
+
+        <details class="editor-details mt-6">
+          <summary>Chỉnh danh sách Checklist của Profile (mỗi dòng 1 bước)</summary>
+          <textarea id="cfgChecklistEditor" rows="5" class="input-full mt-6" placeholder="Mỗi dòng là 1 mục checklist..."></textarea>
+        </details>
+      </div>
+
+      <!-- 4. Thresholds & Sensor Config Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Ngưỡng Chi Tiết &amp; Thông Số Sensor</h2>
+        </div>
+
+        <div class="form-group" id="cfgBarrierAxisGroup">
+          <label for="cfgBarrierAxis">Quy ước trục Barrier (chỉ hiện khi bật R4)</label>
+          <select id="cfgBarrierAxis" class="input-full">
+            <option value="length_is_x">dx = Chiều dài (L), dy = Bề dày (W)</option>
+            <option value="width_is_x">Mũi tên theo bề ngang: dx = Bề dày (W), dy = Chiều dài (L)</option>
+          </select>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="cfgOccOp">So sánh Occluded</label>
+            <select id="cfgOccOp" class="input-full">
+              <option value=">">&gt; (lớn hơn)</option>
+              <option value=">=">&gt;= (từ ngưỡng)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="cfgOccThr">Ngưỡng chuỗi</label>
+            <input id="cfgOccThr" type="number" min="1" max="100" class="input-full" />
+          </div>
+          <div class="form-group">
+            <label for="cfgOccMode">Đếm theo</label>
+            <select id="cfgOccMode" class="input-full">
+              <option value="frame">Frame</option>
+              <option value="keyframe">Keyframe</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="cfgCoordFrame">Hệ tọa độ</label>
+            <select id="cfgCoordFrame" class="input-full">
+              <option value="lidar_centric">LiDAR-centric</option>
+              <option value="world_centric">World-centric</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="cfgFrameDt">Chu kỳ frame (s)</label>
+            <input id="cfgFrameDt" type="number" step="0.05" min="0.02" max="5" class="input-full" title="0.5s = 2Hz, 0.1s = 10Hz" />
+          </div>
+          <div class="form-group">
+            <label for="cfgOccMinPts">Điểm gắn Occ</label>
+            <input id="cfgOccMinPts" type="number" min="0" max="50" class="input-full" title="Số điểm < ngưỡng sẽ tự gắn occluded khi Pre-label (0 = tắt)" />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="cfgPitchRoll">Ngưỡng Pitch/Roll (°)</label>
+            <input id="cfgPitchRoll" type="number" step="0.5" min="1" max="45" class="input-full" />
+          </div>
+          <div class="form-group">
+            <label for="cfgYawJump">Nhảy Yaw Vehicle (°)</label>
+            <input id="cfgYawJump" type="number" step="5" min="10" max="180" class="input-full" />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="cfgAccel">Ngưỡng Δ²p (m)</label>
+            <input id="cfgAccel" type="number" step="0.5" min="0.5" max="20" class="input-full" />
+          </div>
+          <div class="form-group">
+            <label for="cfgSizeTol">Lệch size Track (%)</label>
+            <input id="cfgSizeTol" type="number" step="1" min="1" max="50" class="input-full" />
+          </div>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="cfgIgnorePedYaw" />
+          <span>Bỏ qua cảnh báo nhảy Yaw cho Pedestrian / người đi bộ</span>
+        </label>
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="cfgMergeRider" />
+          <span>Pre-label: Gộp người ngồi trên xe 2 bánh thành 1 box chung</span>
+        </label>
+        <label class="checkbox-row mt-6">
+          <input type="checkbox" id="cfgAllowPitchRoll" />
+          <span>Cho phép nghiêng Pitch/Roll (đường dốc 9-DoF — không ép rx=ry=0 khi chèn)</span>
+        </label>
+      </div>
+
+      <!-- 5. Day 0 Probe Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Kiểm Chứng Kỹ Thuật Job (Day 0 Probe)</h2>
+        </div>
+        <p class="hint">
+          Kiểm tra cấu trúc mảng <code>points</code>, nhiễu nền <code>Δyaw</code> / <code>Δ²p</code>, định dạng PCD và đường ghi <code>ObjectState</code> trên job hiện tại.
+        </p>
+        <div class="action-row">
+          <button id="btnRunDay0" class="btn btn-secondary flex-1">Chạy Probe Kỹ Thuật</button>
+          <button id="btnCopyDay0" class="btn btn-ghost" disabled>Copy Báo Cáo</button>
+        </div>
+        <pre id="day0Output" class="code-preview hidden"></pre>
+      </div>
+
+      <!-- 6. V2 / V2.5 Modules & Save Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Module Nâng Cao (V2 · V2.5) &amp; Lưu</h2>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="cfgEnableV2" />
+          <span><b>Bật V2 Controlled Assist</b> (Sửa bán tự động qua <code>ObjectState.save()</code>, tự sao lưu JSON trước khi sửa)</span>
+        </label>
+
+        <label class="checkbox-row mt-10">
+          <input type="checkbox" id="cfgEnableDirectIssue" />
+          <span><b>Bật V2.5 Gửi trực tiếp CVAT</b> (<code>POST /api/issues</code>)</span>
+        </label>
+
+        <div class="action-row mt-10">
+          <button id="btnDownloadSnapshotSettings" class="btn btn-xs btn-secondary">Tải Snapshot JSON</button>
+          <button id="btnSaveSettings" class="btn btn-sm btn-primary flex-1">Lưu Cấu Hình &amp; Profile</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal V2 Lock Size on Keyframes -->
+  <div id="lockSizeModal" class="modal hidden">
+    <div class="modal-backdrop" id="lockSizeBackdrop"></div>
+    <div class="modal-dialog">
+      <div class="card-header">
+        <h2 id="lockSizeTitle">Khóa Kích Thước Lên Keyframes</h2>
+        <button id="btnCloseLockModal" class="btn btn-xs btn-ghost">✕</button>
+      </div>
+      <p class="hint" id="lockSizeSubtitle"></p>
+      <div id="lockSizeList" class="checklist-list"></div>
+      <div class="action-row mt-10">
+        <button id="btnConfirmLockSize" class="btn btn-primary flex-1">Áp dụng (Backup + ObjectState.save)</button>
+        <button id="btnCancelLockSize" class="btn btn-ghost">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Upload / Paste Guideline -->
+  <div id="guidelineModal" class="modal hidden">
+    <div class="modal-backdrop" id="guidelineModalBackdrop"></div>
+    <div class="modal-dialog">
+      <div class="card-header">
+        <h2>Upload / Dán Guideline Theo Profile</h2>
+        <button id="btnCloseGuidelineModal" class="btn btn-xs btn-ghost">✕</button>
+      </div>
+      <p class="hint">
+        Tải lên file <b>.json, .csv, .md, .txt, .docx, .pdf</b> hoặc dán trực tiếp bảng kích thước / quy định từ tài liệu Guideline để tự động trích xuất Bộ nhãn, Khoảng cách, Bảng kích thước và các Luật QA.
+      </p>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="guidelineApplyMode">Chế độ nạp</label>
+          <select id="guidelineApplyMode" class="input-full">
+            <option value="new">Tạo thành Profile mới</option>
+            <option value="overwrite">Cập nhật đè vào Profile đang chọn</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="guidelineProfileName">Tên Profile</label>
+          <input id="guidelineProfileName" type="text" class="input-full" placeholder="vd: Lab Day 13 Guideline" />
+        </div>
+      </div>
+
+      <div class="action-row mt-6">
+        <button id="btnPickGuidelineFile" class="btn btn-xs btn-secondary">📂 Chọn file (.json/.csv/.md/.txt/.docx/.pdf)</button>
+        <input id="fileGuidelineUpload" type="file" accept=".json,.csv,.tsv,.md,.txt,.docx,.pdf" class="hidden" />
+        <button id="btnModalDownloadTpl" class="btn btn-xs btn-ghost">⬇ Tải JSON Mẫu</button>
+      </div>
+      <div id="guidelineFileStatus" class="field-hint">Chưa chọn file (có thể dán trực tiếp nội dung bên dưới).</div>
+
+      <div class="form-group mt-6">
+        <label for="guidelineRawText">Nội dung Guideline (JSON / CSV / Bảng Markdown / Văn bản copy từ PDF)</label>
+        <textarea id="guidelineRawText" rows="8" class="input-full mono-textarea" placeholder='Ví dụ bảng Markdown hoặc text:
+| Class | L (m) | W (m) | H (m) | Distance |
+| Car | 3.8 - 5.3 | 1.7 - 2.1 | 1.4 - 2.1 | 50m |
+| Pedestrian | 0.4 - 0.9 | 0.4 - 0.9 | 1.4 - 1.95 | 40m |'></textarea>
+      </div>
+
+      <div class="action-row mt-10">
+        <button id="btnApplyGuidelineModal" class="btn btn-primary flex-1">Phân tích &amp; Áp dụng</button>
+        <button id="btnCancelGuidelineModal" class="btn btn-ghost">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

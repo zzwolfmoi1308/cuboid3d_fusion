@@ -1,0 +1,8 @@
+fastapi>=0.115.0
+uvicorn>=0.32.0
+numpy>=1.26.0
+scipy>=1.14.0
+scikit-learn>=1.5.0
+ultralytics>=8.3.0
+opencv-python
+# torch 2.5.1+cu121 (P2000 sm_61): pip install torch==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121

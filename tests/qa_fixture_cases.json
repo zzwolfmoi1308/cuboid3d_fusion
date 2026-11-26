@@ -1,0 +1,113 @@
+{
+  "description": "Bộ fixture có lỗi cố ý cho toàn bộ 9 luật QA V1 + test chống báo sai khi ego quay đầu",
+  "labelIdToName": {
+    "1": "Car",
+    "2": "Truck",
+    "3": "Trailer",
+    "4": "Bus",
+    "5": "Construction_vehicle",
+    "6": "Pedestrian",
+    "7": "Two_wheels",
+    "8": "Barrier",
+    "99": "Van_Invalid"
+  },
+  "rawAnnotations": {
+    "shapes": [
+      {
+        "id": 901,
+        "frame": 5,
+        "label_id": 1,
+        "occluded": false,
+        "outside": false,
+        "points": [12.0, 2.0, -1.0, 0, 0, 0.1, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0]
+      }
+    ],
+    "tracks": [
+      {
+        "id": 101,
+        "label_id": 99,
+        "comment": "R1: Sai taxonomy (Van_Invalid)",
+        "shapes": [
+          { "frame": 0, "occluded": false, "outside": false, "points": [10, 0, -1, 0, 0, 0, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 1, "occluded": false, "outside": false, "points": [12, 0, -1, 0, 0, 0, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 102,
+        "label_id": 1,
+        "comment": "R2: Car ở khoảng cách 51.2m (vượt 50m, sát biên ±2m -> gợi ý UNCERTAIN_SCOPE)",
+        "shapes": [
+          { "frame": 0, "occluded": false, "outside": false, "points": [51.2, 0, -1, 0, 0, 0, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 1, "occluded": false, "outside": false, "points": [49.0, 0, -1, 0, 0, 0, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 103,
+        "label_id": 1,
+        "comment": "R3: Car dài 7.5m (vượt bảng trang 7) + R5: pitch rx = 0.22 rad (~12.6 deg)",
+        "shapes": [
+          { "frame": 0, "occluded": false, "outside": false, "points": [15, 3, -1, 0.22, 0, 0, 7.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 1, "occluded": false, "outside": false, "points": [16, 3, -1, 0, 0, 0, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 104,
+        "label_id": 8,
+        "comment": "R4: Barrier xoay nhầm 90 độ (dx=0.55, dy=2.2 khi mode length_is_x)",
+        "shapes": [
+          { "frame": 0, "occluded": false, "outside": false, "points": [10, -4, -1.2, 0, 0, 0, 0.55, 2.2, 0.95, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 1, "occluded": false, "outside": false, "points": [10, -4, -1.2, 0, 0, 0, 0.55, 2.2, 0.95, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 105,
+        "label_id": 1,
+        "comment": "R6: Lệch kích thước trong cùng track > 5% (frame 0 chuẩn 4.5x1.85x1.55, frame 4 co còn 4.0m)",
+        "shapes": [
+          { "frame": 0, "occluded": false, "outside": false, "points": [10, 5, -1, 0, 0, 0, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 4, "occluded": false, "outside": false, "points": [18, 5, -1, 0, 0, 0, 4.0, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 106,
+        "label_id": 2,
+        "comment": "R7a: occluded=true & outside=true cùng bật tại frame 8; R7b: chuỗi occluded 7 frames (frame 0..6)",
+        "shapes": [
+          { "frame": 0, "occluded": true, "outside": false, "points": [20, -2, -0.5, 0, 0, 0, 6.5, 2.3, 2.8, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 7, "occluded": false, "outside": false, "points": [25, -2, -0.5, 0, 0, 0, 6.5, 2.3, 2.8, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 8, "occluded": true, "outside": true, "points": [26, -2, -0.5, 0, 0, 0, 6.5, 2.3, 2.8, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 107,
+        "label_id": 1,
+        "comment": "R8: Nhảy yaw ngược đầu 180 độ tại frame 1 + đột biến quỹ đạo Δ²p tại frame 1",
+        "shapes": [
+          { "frame": 0, "occluded": false, "outside": false, "points": [15, -5, -1, 0, 0, 0.0, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 1, "occluded": false, "outside": false, "points": [22, -5, -1, 0, 0, 3.12, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 2, "occluded": false, "outside": false, "points": [17, -5, -1, 0, 0, 3.12, 4.5, 1.85, 1.55, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 108,
+        "label_id": 6,
+        "comment": "R9a: Track bật outside=true tại frame 2 rồi xuất hiện lại tại frame 4; đồng thời test Pedestrian quay đầu 170° không bị báo sai yaw",
+        "shapes": [
+          { "frame": 0, "occluded": false, "outside": false, "points": [8, 4, -0.9, 0, 0, 0.0, 0.6, 0.6, 1.7, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 1, "occluded": false, "outside": false, "points": [8.4, 4, -0.9, 0, 0, 2.95, 0.6, 0.6, 1.7, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 2, "occluded": false, "outside": true, "points": [8.6, 4, -0.9, 0, 0, 2.95, 0.6, 0.6, 1.7, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 4, "occluded": false, "outside": false, "points": [9.0, 4, -0.9, 0, 0, 2.95, 0.6, 0.6, 1.7, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      },
+      {
+        "id": 109,
+        "label_id": 7,
+        "comment": "R9b: Single-frame track lẻ loi (chỉ 1 frame rồi outside)",
+        "shapes": [
+          { "frame": 3, "occluded": false, "outside": false, "points": [12, 6, -1.0, 0, 0, 0, 1.9, 0.75, 1.65, 0, 0, 0, 0, 0, 0, 0] },
+          { "frame": 4, "occluded": false, "outside": true, "points": [12, 6, -1.0, 0, 0, 0, 1.9, 0.75, 1.65, 0, 0, 0, 0, 0, 0, 0] }
+        ]
+      }
+    ]
+  }
+}
